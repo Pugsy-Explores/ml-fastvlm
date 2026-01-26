@@ -197,6 +197,8 @@ class FastVLMServer:
                 num_beams=num_beams,
                 max_new_tokens=256,
                 use_cache=True,
+                eos_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.pad_token_id,
             )
 
         outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
@@ -272,6 +274,8 @@ class FastVLMServer:
                 num_beams=num_beams,
                 max_new_tokens=256,
                 use_cache=True,
+                eos_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.pad_token_id,
             )
 
         outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()

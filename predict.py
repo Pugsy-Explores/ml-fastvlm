@@ -62,7 +62,9 @@ def predict(args):
             top_p=args.top_p,
             num_beams=args.num_beams,
             max_new_tokens=256,
-            use_cache=True)
+            use_cache=True,
+            eos_token_id=tokenizer.eos_token_id,
+            pad_token_id=tokenizer.pad_token_id)
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
         print(outputs)

@@ -49,6 +49,8 @@ def describe(image_bytes: bytes, prompt: str) -> str:
             images=image_tensor,
             max_new_tokens=128,
             do_sample=False,
+            eos_token_id=tokenizer.eos_token_id,
+            pad_token_id=tokenizer.pad_token_id,
         )
     return tokenizer.decode(output[0], skip_special_tokens=True)
 
