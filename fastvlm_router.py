@@ -3,6 +3,8 @@ import os
 import time
 import logging
 import subprocess
+import signal
+import atexit
 from typing import List, Dict, Any
 from itertools import cycle
 import psutil
@@ -260,6 +262,60 @@ def bootstrap_workers():
     logger.info("Started %d FastVLM workers.", len(workers))
 
 
+def cleanup_dead_workers():
+    """Remove dead workers from the list."""
+    global workers, worker_cycle
+    with workers_lock:
+        alive_workers = []
+        for w in workers:
+            if w.process.poll() is None:  # Still running (None means process hasn't terminated)
+                alive_workers.append(w)
+            else:
+                logger.warning("Removing dead worker on port %d (exit code: %s)", 
+                             w.port, w.process.returncode)
+        if len(alive_workers) != len(workers):
+            workers[:] = alive_workers
+            if workers:
+                worker_cycle = cycle(workers)
+            else:
+                worker_cycle = None
+                logger.error("All workers are dead!")
+
+
+def cleanup_workers():
+    """Terminate all worker processes."""
+    global workers
+    with workers_lock:
+        for w in workers:
+            try:
+                if w.process.poll() is None:  # Still running
+                    logger.info("Terminating worker on port %d", w.port)
+                    w.process.terminate()
+                    try:
+                        w.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        logger.warning("Worker on port %d did not terminate, killing...", w.port)
+                        w.process.kill()
+                        w.process.wait()
+            except Exception as e:
+                logger.exception("Error terminating worker on port %d: %s", w.port, e)
+        workers.clear()
+    
+    # Shutdown NVML if initialized
+    if pynvml:
+        try:
+            pynvml.nvmlShutdown()
+        except Exception:
+            pass
+
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals."""
+    logger.info("Received signal %d, cleaning up workers...", signum)
+    cleanup_workers()
+    exit(0)
+
+
 def pick_available_worker() -> Worker:
     """
     Pick a worker that has available concurrency.
@@ -269,6 +325,12 @@ def pick_available_worker() -> Worker:
 
     if worker_cycle is None or not workers:
         raise RuntimeError("Worker cycle not initialized or no workers available.")
+
+    # Clean up dead workers before picking
+    cleanup_dead_workers()
+    
+    if not workers:
+        raise RuntimeError("No workers available after cleanup.")
 
     with workers_lock:
         # Snapshot to avoid infinite loop
@@ -403,9 +465,17 @@ def summarize_video():
 
 
 if __name__ == "__main__":
+    # Register cleanup handlers
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    atexit.register(cleanup_workers)
+    
     bootstrap_workers()
     logger.info("Starting FastVLM Router on 0.0.0.0:%d", ROUTER_PORT)
-    app.run(host="0.0.0.0", port=ROUTER_PORT, debug=False)
+    try:
+        app.run(host="0.0.0.0", port=ROUTER_PORT, debug=False)
+    finally:
+        cleanup_workers()
 
 
 

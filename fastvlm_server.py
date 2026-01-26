@@ -1,6 +1,7 @@
 # fastvlm_server.py
 import logging
 import os
+import atexit
 from concurrent.futures import ThreadPoolExecutor
 
 from flask import Flask, jsonify, request
@@ -25,6 +26,13 @@ logger = logging.getLogger("FastVLMHTTP")
 # -----------------------
 app = Flask(__name__)
 executor = ThreadPoolExecutor(max_workers=int(os.getenv("FASTVLM_WORKERS", "1")))
+
+def shutdown_executor():
+    """Shutdown ThreadPoolExecutor on exit."""
+    logger.info("Shutting down ThreadPoolExecutor...")
+    executor.shutdown(wait=True, timeout=30)
+
+atexit.register(shutdown_executor)
 
 cfg = load_fastvlm_config()
 engine = FastVLMEngine(cfg)
@@ -157,4 +165,7 @@ if __name__ == "__main__":
     # Dev-only. In prod: gunicorn -w 1 -b 0.0.0.0:7860 fastvlm_server:app
     port = int(os.getenv("FASTVLM_PORT", "7860"))
     logger.info("Starting FastVLM HTTP server on 0.0.0.0:%d", port)
-    app.run(host="0.0.0.0", port=port, debug=False)
+    try:
+        app.run(host="0.0.0.0", port=port, debug=False)
+    finally:
+        shutdown_executor()
