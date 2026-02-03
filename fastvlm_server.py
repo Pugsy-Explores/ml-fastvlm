@@ -105,6 +105,10 @@ def predict_image():
     except FileNotFoundError as e:
         logger.exception("File not found error in predict_image")
         return error_response(str(e), 400)
+    except (ValueError, PermissionError) as e:
+        # Invalid image file, corrupted, or permission issues
+        logger.exception("Image validation error in predict_image")
+        return error_response(str(e), 400, code="invalid_image")
     except Exception as e:
         logger.exception("Unhandled error in predict_image")
         return error_response(str(e), 500, code="internal_error")

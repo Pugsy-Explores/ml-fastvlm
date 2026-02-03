@@ -22,6 +22,11 @@ import cv2
 import numpy as np
 import torch
 from PIL import Image
+try:
+    from PIL import UnidentifiedImageError
+except ImportError:
+    # Fallback for older Pillow versions
+    UnidentifiedImageError = OSError
 
 from scenedetect import VideoManager, SceneManager
 from scenedetect.detectors import ContentDetector
@@ -334,8 +339,16 @@ class FastVLMModel:
         if isinstance(image_input, str):
             if not os.path.exists(image_input):
                 raise FileNotFoundError(f"Image path does not exist: {image_input}")
+            if not os.path.isfile(image_input):
+                raise ValueError(f"Image path is not a file: {image_input}")
+            # Check if file is readable
+            if not os.access(image_input, os.R_OK):
+                raise PermissionError(f"Image file is not readable: {image_input}")
             logger.debug("Inference on image file: %s", image_input)
-            image = Image.open(image_input).convert("RGB")
+            try:
+                image = Image.open(image_input).convert("RGB")
+            except UnidentifiedImageError as e:
+                raise ValueError(f"Cannot identify image file '{image_input}'. The file may be corrupted, empty, or not a valid image format. Error: {e}") from e
             image_tensor = process_images([image], self.image_processor, self.model.config)[0]
 
         elif isinstance(image_input, Image.Image):
