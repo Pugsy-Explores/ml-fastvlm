@@ -39,10 +39,28 @@ class TempMedia:
       - gs://bucket/path URIs (uses google-cloud-storage if installed)
 
     The file is removed on __exit__ unless it was already a local path (in that case it is not deleted).
+
+    Args:
+        uri: Media URI (local path, HTTP/HTTPS URL, or GCS URI)
+        source_type: Explicit source type - "local", "http", "gcs", or "auto" (default: "auto")
+                    When "auto", the source type is inferred from the URI scheme or file existence.
+        max_bytes: Maximum download size in bytes (default: from MediaConfig)
+        timeout: Download timeout in seconds (default: from MediaConfig)
     """
 
-    def __init__(self, uri: str, max_bytes: Optional[int] = None, timeout: Optional[float] = None):
+    def __init__(
+        self,
+        uri: str,
+        source_type: str = "auto",
+        max_bytes: Optional[int] = None,
+        timeout: Optional[float] = None,
+    ):
         self.uri = uri
+        self.source_type = source_type.lower() if source_type else "auto"
+        if self.source_type not in ("local", "http", "gcs", "auto"):
+            raise ValueError(
+                f"Invalid source_type '{source_type}'. Must be one of: 'local', 'http', 'gcs', 'auto'"
+            )
         self.max_bytes = int(max_bytes) if max_bytes is not None else DEFAULT_MAX_BYTES
         self.timeout = float(timeout) if timeout is not None else DEFAULT_TIMEOUT
         self._tmp_path: Optional[str] = None
@@ -52,27 +70,58 @@ class TempMedia:
         if not self.uri:
             raise ValueError("Empty media URI provided")
 
-        # Local path
-        if os.path.exists(self.uri):
+        # Handle explicit source type
+        if self.source_type == "local":
+            if not os.path.exists(self.uri):
+                raise FileNotFoundError(f"Local file not found: {self.uri}")
             self._is_local = True
             return os.path.abspath(self.uri)
 
-        parsed = urllib.parse.urlparse(self.uri)
-        scheme = parsed.scheme.lower()
-
-        if scheme in ("http", "https"):
+        elif self.source_type == "http":
+            parsed = urllib.parse.urlparse(self.uri)
+            scheme = parsed.scheme.lower()
+            if scheme not in ("http", "https"):
+                raise ValueError(f"URI scheme '{scheme}' does not match source_type 'http'. "
+                               f"Expected http:// or https:// URL")
             self._tmp_path = self._download_http(self.uri)
             return self._tmp_path
-        elif scheme == "gs":
+
+        elif self.source_type == "gcs":
+            parsed = urllib.parse.urlparse(self.uri)
+            scheme = parsed.scheme.lower()
+            if scheme != "gs":
+                raise ValueError(f"URI scheme '{scheme}' does not match source_type 'gcs'. "
+                               f"Expected gs:// URI")
             try:
                 self._tmp_path = self._download_gs(self.uri)
                 return self._tmp_path
             except ImportError as exc:
                 raise RuntimeError("google-cloud-storage is required to download gs:// URIs. "
                                    "Install with `pip install google-cloud-storage`") from exc
-        else:
-            # Unknown scheme: try to treat as local path (missing) -> error
-            raise ValueError(f"Unsupported media URI scheme or file does not exist: {self.uri}")
+
+        # Auto-detect (backward compatibility)
+        else:  # source_type == "auto"
+            # Local path
+            if os.path.exists(self.uri):
+                self._is_local = True
+                return os.path.abspath(self.uri)
+
+            parsed = urllib.parse.urlparse(self.uri)
+            scheme = parsed.scheme.lower()
+
+            if scheme in ("http", "https"):
+                self._tmp_path = self._download_http(self.uri)
+                return self._tmp_path
+            elif scheme == "gs":
+                try:
+                    self._tmp_path = self._download_gs(self.uri)
+                    return self._tmp_path
+                except ImportError as exc:
+                    raise RuntimeError("google-cloud-storage is required to download gs:// URIs. "
+                                       "Install with `pip install google-cloud-storage`") from exc
+            else:
+                # Unknown scheme: try to treat as local path (missing) -> error
+                raise ValueError(f"Unsupported media URI scheme or file does not exist: {self.uri}")
 
     def __exit__(self, exc_type, exc, tb):
         # remove the temp file if we created one

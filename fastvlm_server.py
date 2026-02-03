@@ -77,13 +77,21 @@ def predict_image():
 
     image_path = data.get("image_path")
     prompt = data.get("prompt", "Describe the image.")
+    media_source_type = data.get("media_source_type", "auto")  # "local", "http", "gcs", or "auto"
 
     if not image_path:
         return error_response("Missing 'image_path'", 400)
 
-    logger.info("predict_image called for %s", image_path)
+    # Validate media_source_type
+    if media_source_type not in ("local", "http", "gcs", "auto"):
+        return error_response(
+            f"Invalid 'media_source_type': '{media_source_type}'. Must be one of: 'local', 'http', 'gcs', 'auto'",
+            400,
+        )
+
+    logger.info("predict_image called for %s (source_type: %s)", image_path, media_source_type)
     try:
-        with TempMedia(image_path) as local_path:
+        with TempMedia(image_path, source_type=media_source_type) as local_path:
             future = executor.submit(engine.describe_image, local_path, prompt)
             output = future.result()
     except ValueError as e:
@@ -121,13 +129,22 @@ def summarize_video():
         return error_response("Invalid JSON body", 400)
 
     video_path = data.get("video_path")
+    media_source_type = data.get("media_source_type", "auto")  # "local", "http", "gcs", or "auto"
+
     if not video_path:
         return error_response("Missing 'video_path'", 400)
 
-    logger.info("summarize_video called for %s", video_path)
+    # Validate media_source_type
+    if media_source_type not in ("local", "http", "gcs", "auto"):
+        return error_response(
+            f"Invalid 'media_source_type': '{media_source_type}'. Must be one of: 'local', 'http', 'gcs', 'auto'",
+            400,
+        )
+
+    logger.info("summarize_video called for %s (source_type: %s)", video_path, media_source_type)
 
     try:
-        with TempMedia(video_path) as local_path:
+        with TempMedia(video_path, source_type=media_source_type) as local_path:
             future = executor.submit(engine.summarize_video, local_path)
             video_result = future.result()
     except ValueError as e:

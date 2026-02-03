@@ -80,19 +80,35 @@ curl http://localhost:9000/healthz
 curl http://localhost:9000/readyz
 ```
 
-**Process an image:**
+**Process an image (local file):**
 ```bash
 curl -X POST http://localhost:9000/predict_image \
   -H "Content-Type: application/json" \
-  -d '{"image_path": "/path/to/image.jpg", "prompt": "Describe this image"}'
+  -d '{"image_path": "/path/to/image.jpg", "prompt": "Describe this image", "media_source_type": "local"}'
 ```
 
-**Process a video:**
+**Process an image (HTTP URL):**
+```bash
+curl -X POST http://localhost:9000/predict_image \
+  -H "Content-Type: application/json" \
+  -d '{"image_path": "https://example.com/image.jpg", "prompt": "Describe this image", "media_source_type": "http"}'
+```
+
+**Process a video (local file):**
 ```bash
 curl -X POST http://localhost:9000/summarize_video \
   -H "Content-Type: application/json" \
-  -d '{"video_path": "/path/to/video.mp4"}'
+  -d '{"video_path": "/path/to/video.mp4", "media_source_type": "local"}'
 ```
+
+**Process a video (HTTP URL):**
+```bash
+curl -X POST http://localhost:9000/summarize_video \
+  -H "Content-Type: application/json" \
+  -d '{"video_path": "https://example.com/video.mp4", "media_source_type": "http"}'
+```
+
+**Note:** `media_source_type` is optional and defaults to `"auto"` (auto-detection). Valid values: `"local"`, `"http"`, `"gcs"`, or `"auto"`.
 
 ### Architecture Summary
 
@@ -515,12 +531,22 @@ The `TempMedia` context manager handles multiple media source types:
 
 * Single-image captioning via `FastVLMModel.predict()`
 * Supports local paths, HTTP/HTTPS URLs, GCS URIs
+* **Media Source Type**: Optional `media_source_type` parameter (`"local"`, `"http"`, `"gcs"`, or `"auto"`)
+  - When `"local"`: Treats `image_path` as a local file path (raises error if file doesn't exist)
+  - When `"http"`: Treats `image_path` as an HTTP/HTTPS URL (downloads to temp file)
+  - When `"gcs"`: Treats `image_path` as a GCS URI (requires google-cloud-storage)
+  - When `"auto"` (default): Auto-detects source type from URI scheme or file existence
 * Fast inference path (typically < 2s on GPU)
 * Configurable prompts
 * Returns structured JSON with caption
 
 #### `/summarize_video`
 
+* **Media Source Type**: Optional `media_source_type` parameter (`"local"`, `"http"`, `"gcs"`, or `"auto"`)
+  - When `"local"`: Treats `video_path` as a local file path (raises error if file doesn't exist)
+  - When `"http"`: Treats `video_path` as an HTTP/HTTPS URL (downloads to temp file)
+  - When `"gcs"`: Treats `video_path` as a GCS URI (requires google-cloud-storage)
+  - When `"auto"` (default): Auto-detects source type from URI scheme or file existence
 * **Video Analysis**:
   - Video stats extraction (FPS, duration, resolution)
   - Duration validation against `max_video_seconds`
@@ -987,7 +1013,41 @@ Proxies to available worker. Returns 503 with `retry_after_sec` if all workers b
 ```json
 {
   "image_path": "/path/to/image.jpg",
-  "prompt": "Describe the image"
+  "prompt": "Describe the image",
+  "media_source_type": "local"
+}
+```
+
+**Request Parameters:**
+- `image_path` (required): Path to image file (local path, HTTP/HTTPS URL, or GCS URI)
+- `prompt` (optional): Prompt for image description (default: "Describe the image.")
+- `media_source_type` (optional): Source type - `"local"`, `"http"`, `"gcs"`, or `"auto"` (default: `"auto"`)
+
+**Examples:**
+
+Local file:
+```json
+{
+  "image_path": "/path/to/image.jpg",
+  "prompt": "Describe this image",
+  "media_source_type": "local"
+}
+```
+
+HTTP URL:
+```json
+{
+  "image_path": "https://example.com/image.jpg",
+  "prompt": "Describe this image",
+  "media_source_type": "http"
+}
+```
+
+Auto-detect (backward compatible):
+```json
+{
+  "image_path": "/path/to/image.jpg",
+  "prompt": "Describe this image"
 }
 ```
 
@@ -1013,6 +1073,43 @@ Proxies to available worker. Returns 503 with `retry_after_sec` if all workers b
 
 #### **POST /summarize_video**
 Proxies to available worker. Returns 503 with `retry_after_sec` if all workers busy.
+
+**Request:**
+```json
+{
+  "video_path": "/path/to/video.mp4",
+  "media_source_type": "local"
+}
+```
+
+**Request Parameters:**
+- `video_path` (required): Path to video file (local path, HTTP/HTTPS URL, or GCS URI)
+- `media_source_type` (optional): Source type - `"local"`, `"http"`, `"gcs"`, or `"auto"` (default: `"auto"`)
+
+**Examples:**
+
+Local file:
+```json
+{
+  "video_path": "/path/to/video.mp4",
+  "media_source_type": "local"
+}
+```
+
+HTTP URL:
+```json
+{
+  "video_path": "https://example.com/video.mp4",
+  "media_source_type": "http"
+}
+```
+
+Auto-detect (backward compatible):
+```json
+{
+  "video_path": "/path/to/video.mp4"
+}
+```
 
 **Request:**
 ```json
