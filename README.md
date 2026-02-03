@@ -48,7 +48,7 @@ cp fastvlm.toml.example fastvlm.toml
 
 ```bash
 # Start router (auto-bootstraps workers)
-PYTHONPATH=./src python -m pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.fastvlm_router
+python3 -m fastvlm_router
 ```
 
 ### Key Environment Variables
@@ -400,7 +400,7 @@ All settings can be overridden via environment variables (e.g., `FASTVLM_MODEL_P
 
 **Usage:**
 ```python
-from pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.core.config import (
+from core.config import (
     load_fastvlm_config,
     load_router_config,
     load_server_config,
@@ -656,10 +656,9 @@ Before running the FastVLM Router, you need to download the model checkpoints an
 
 The FastVLM models are downloaded using the `get_models.sh` script. This script downloads all available model variants (0.5B, 1.5B, 7B) in both stage2 and stage3 configurations.
 
-**From the FastVLM module directory:**
+**From the repository root:**
 
 ```bash
-cd src/pugsy_ai/pipelines/vlm_pipeline/fastvlm/ml_fastvlm
 chmod +x get_models.sh
 ./get_models.sh
 ```
@@ -735,12 +734,12 @@ See `fastvlm.toml.example` for a complete configuration template with all availa
 
 1. **Absolute path** (recommended):
    ```toml
-   model_path = "/full/path/to/pugsy_ai/src/pugsy_ai/pipelines/vlm_pipeline/fastvlm/ml_fastvlm/checkpoints/llava-fastvithd_0.5b_stage3"
+   model_path = "/full/path/to/ml-fastvlm/checkpoints/llava-fastvithd_0.5b_stage3"
    ```
 
-2. **Relative path** (from where config is loaded):
+2. **Relative path** (from repository root):
    ```toml
-   model_path = "src/pugsy_ai/pipelines/vlm_pipeline/fastvlm/ml_fastvlm/checkpoints/llava-fastvithd_0.5b_stage3"
+   model_path = "checkpoints/llava-fastvithd_0.5b_stage3"
    ```
 
 3. **Environment variable override**:
@@ -766,10 +765,10 @@ Verify that your model checkpoint exists and is accessible:
 
 ```bash
 # Check if model directory exists
-ls -la src/pugsy_ai/pipelines/vlm_pipeline/fastvlm/ml_fastvlm/checkpoints/llava-fastvithd_0.5b_stage3
+ls -la checkpoints/llava-fastvithd_0.5b_stage3
 
 # Verify key files are present (should include config.json, pytorch_model.bin, etc.)
-ls src/pugsy_ai/pipelines/vlm_pipeline/fastvlm/ml_fastvlm/checkpoints/llava-fastvithd_0.5b_stage3/
+ls checkpoints/llava-fastvithd_0.5b_stage3/
 ```
 
 **Expected files in checkpoint directory:**
@@ -827,15 +826,16 @@ The router will:
 ### Method 2: Direct Python Execution
 
 ```bash
-cd /Users/shang/my_work/pugsy_ai
-PYTHONPATH=./src python -m pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.fastvlm_router
+# From the repository root
+cd /path/to/ml-fastvlm
+python3 -m fastvlm_router
 ```
 
-Or from the module directory:
+Or run the server directly:
 
 ```bash
-cd src/pugsy_ai/pipelines/vlm_pipeline/fastvlm/ml_fastvlm
-PYTHONPATH=../../../../.. python fastvlm_router.py
+# Start worker server directly (for testing, not recommended for production)
+python3 -m fastvlm_server
 ```
 
 ### Configuration (Environment Variables)
@@ -851,7 +851,7 @@ The router can be configured via environment variables:
 | `FASTVLM_TARGET_VRAM_FRACTION` | `0.7` | Stop spawning workers when GPU memory reaches this fraction |
 | `FASTVLM_TARGET_RAM_FRACTION` | `0.8` | Stop spawning workers when RAM reaches this fraction |
 | `FASTVLM_MAX_CONCURRENT_PER_WORKER` | `2` | Maximum concurrent requests per worker |
-| `FASTVLM_SERVER_MODULE` | `pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.fastvlm_server` | Python module path for worker server |
+| `FASTVLM_SERVER_MODULE` | `fastvlm_server` | Python module path for worker server |
 | `FASTVLM_PYTHON_BIN` | `python3` | Python executable to use for workers |
 | `FASTVLM_LOG_LEVEL` | `INFO` | Logging level |
 
