@@ -62,7 +62,7 @@ class FastVLMConfig:
     max_resolution: int = 1080
     max_frames: int = 24
     max_context_chars: int = 256
-    enable_summary: bool = True
+    enable_summary: bool = False
     enable_analysis: bool = False
     log_level: str = "INFO"
 
@@ -152,7 +152,7 @@ def load_fastvlm_config(toml_path: Optional[str] = None) -> FastVLMConfig:
         max_resolution=_int_from_env("FASTVLM_MAX_RES", g("max_resolution", 1080)),
         max_frames=_int_from_env("FASTVLM_MAX_FRAMES", g("max_frames", 24)),
         max_context_chars=_int_from_env("FASTVLM_MAX_CONTEXT_CHARS", g("max_context_chars", 256)),
-        enable_summary=_bool_from_env("FASTVLM_ENABLE_SUMMARY", g("enable_summary", True)),
+        enable_summary=_bool_from_env("FASTVLM_ENABLE_SUMMARY", g("enable_summary", False)),
         enable_analysis=_bool_from_env("FASTVLM_ENABLE_ANALYSIS", g("enable_analysis", False)),
         log_level=os.getenv("FASTVLM_LOG_LEVEL", g("log_level", "INFO")),
     )
