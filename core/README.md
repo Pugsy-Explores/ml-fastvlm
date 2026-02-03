@@ -9,7 +9,6 @@ The core configuration system consolidates all environment variables and configu
 - **Centralized Configuration**: All configs in one place
 - **Type Safety**: Dataclass-based configs with type hints
 - **Flexible Loading**: Support for TOML files and environment variables
-- **Backward Compatibility**: Existing code continues to work
 
 ## Structure
 
@@ -142,20 +141,6 @@ download_timeout_seconds = 300.0
 ```
 
 See `fastvlm.toml.example` for a complete example.
-
-## Backward Compatibility
-
-The old `fastvlm_config.py` module is maintained for backward compatibility. It now delegates to the core config system, so existing code continues to work:
-
-```python
-# Old code still works
-from pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.fastvlm_config import (
-    FastVLMConfig,
-    load_fastvlm_config,
-)
-
-cfg = load_fastvlm_config()
-```
 
 ## Migration Guide
 

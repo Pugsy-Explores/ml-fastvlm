@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, jsonify, request
 
 from .core_fastvlm_engine import FastVLMEngine
-from .fastvlm_config import load_fastvlm_config
+from .core.config import load_fastvlm_config
 from .tmp_media import TempMedia
 from .core.config import load_server_config
 

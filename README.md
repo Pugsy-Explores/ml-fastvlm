@@ -299,9 +299,6 @@ router_cfg = load_router_config()
 server_cfg = load_server_config()
 ```
 
-**Backward Compatibility:**
-The legacy `fastvlm_config.py` module is maintained for backward compatibility and delegates to the core config system.
-
 ### Media Handling (`tmp_media.py`)
 
 The `TempMedia` context manager handles multiple media source types:
@@ -478,7 +475,6 @@ ml_fastvlm/
 ├── fastvlm_router.py          # Router service (worker management, load balancing)
 ├── fastvlm_server.py          # Worker HTTP server (Flask endpoints)
 ├── core_fastvlm_engine.py      # Core inference engine (model, video processing)
-├── fastvlm_config.py           # Legacy config (backward compatibility wrapper)
 ├── tmp_media.py                # Media downloader (local/HTTP/GCS)
 ├── prompts.py                  # Prompt templates (HUMAN_FRAME_PROMPT)
 ├── core/                       # Centralized configuration system
