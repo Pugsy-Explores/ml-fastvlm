@@ -17,7 +17,7 @@ It is built for:
 * Content understanding / metadata enrichment
 * Faster LLM prompting with structured VLM context
 
-The system is optimized for **GPU efficiency**, **parallel workload handling**, **adaptive load shedding**, and **predictable retry semantics**.
+The system is optimized for **GPU efficiency** and **parallel workload handling**.
 
 ---
 
@@ -33,10 +33,8 @@ flowchart TB
         direction TB
         R1[Worker Bootstrap<br/>GPU/RAM Aware] --> R2[Worker Health<br/>Monitoring]
         R2 --> R3[Load Balancing<br/>Round-Robin]
-        R3 --> R4[Concurrency Control<br/>Slot Management]
-        R4 --> R5{Worker<br/>Available?}
+        R3 --> R5{Worker<br/>Available?}
         R5 -->|Yes| R6[Proxy Request]
-        R5 -->|No| R7[503 + retry_after_sec]
     end
     
     subgraph Workers ["FastVLM Worker Processes (fastvlm_server.py)"]
@@ -73,8 +71,6 @@ flowchart TB
 - **Worker Bootstrap**: Spawns worker processes with GPU/RAM awareness (NVML + psutil)
 - **Health Monitoring**: Tracks worker process health, removes dead workers
 - **Load Balancing**: Round-robin selection of available workers
-- **Concurrency Control**: Per-worker slot management (`MAX_CONCURRENT_PER_WORKER`)
-- **Load Shedding**: Returns 503 with adaptive `retry_after_sec` when all workers busy
 - **Request Proxying**: Forwards requests to workers, aggregates responses
 
 **Worker Server (`fastvlm_server.py`):**
@@ -114,12 +110,8 @@ flowchart TB
     
     Listen --> Request[Client Request]
     Request --> Pick[Pick Available Worker<br/>Round-Robin]
-    Pick --> TrySlot{Try Acquire<br/>Concurrency Slot}
-    TrySlot -->|Success| Proxy[Proxy to Worker<br/>HTTP Request]
-    TrySlot -->|All Busy| ComputeRetry[Compute retry_after_sec<br/>Based on endpoint + load]
-    ComputeRetry --> Return503[Return 503<br/>workers_busy]
-    Proxy --> Release[Release Slot<br/>in finally block]
-    Release --> Response[Return Response]
+    Pick --> Proxy[Proxy to Worker<br/>HTTP Request]
+    Proxy --> Response[Return Response]
     
     classDef router fill:#4a90e2,stroke:#fff,color:#fff
     class Start,Init,Bootstrap,Listen,Request router
@@ -127,10 +119,9 @@ flowchart TB
 
 **Key Router Functions:**
 - `bootstrap_workers()`: Spawns workers until GPU/RAM thresholds reached
-- `pick_available_worker()`: Round-robin selection with concurrency slot check
-- `compute_retry_after()`: Adaptive retry delay (video: 8s base + 10s/load, image: 1s base + 2s/load)
+- `pick_available_worker()`: Round-robin selection of available workers
 - `cleanup_dead_workers()`: Removes terminated workers from pool
-- `proxy_post()` / `proxy_get()`: HTTP proxying with slot management
+- `proxy_post()` / `proxy_get()`: HTTP proxying to workers
 
 ### Server Workflow (`fastvlm_server.py`)
 
@@ -381,20 +372,7 @@ The `TempMedia` context manager handles multiple media source types:
 * Uses NVML + psutil.
 * Prevents OOM and GPU thrashing.
 
-### **3. Inflight Concurrency Control**
-
-* Each worker has configurable `max_concurrent`.
-* Router returns structured 503 when overloaded.
-
-### **4. Adaptive Retry-After**
-
-Router computes retry delay based on:
-
-* Endpoint type (image/video)
-* Total in-flight load
-* Client retry attempt (`X-Retry-Attempt`)
-
-### **5. Full Inference Pipelines**
+### **3. Full Inference Pipelines**
 
 #### `/predict_image`
 
@@ -431,15 +409,14 @@ Router computes retry delay based on:
   - `VideoSummaryResult` dataclass with all metadata
   - Structured JSON response with timing breakdown
 
-### **6. Robust Testing Suite**
+### **4. Robust Testing Suite**
 
 * Parallel stress test for image
 * Parallel stress test for video
 * Timing tests
-* Retry drain-down tests
 * Error path coverage
 
-### **7. Clean API**
+### **5. Clean API**
 
 * `/healthz`
 * `/readyz`
@@ -700,8 +677,6 @@ Router (Port 9000)
 The router:
 - **Bootstraps workers** on startup (checks GPU/RAM before spawning)
 - **Load balances** requests across available workers
-- **Manages concurrency** (max requests per worker)
-- **Returns 503** with `retry_after_sec` when all workers are busy
 - **Monitors worker health** via `/healthz` endpoint
 
 ### Testing the Router
