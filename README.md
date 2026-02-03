@@ -2,6 +2,8 @@
 
 **High-Performance Vision-Language Model Server for Image & Video Understanding**
 
+> **📌 For standalone repository usage with centralized configuration system, see the [`refactor/config-centralization`](https://github.com/Pugsy-Explores/ml-fastvlm/tree/refactor/config-centralization) branch.**
+
 ---
 
 ## 🧭 Overview
