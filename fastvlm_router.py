@@ -20,7 +20,7 @@ except ImportError:
 
 import threading  # NEW
 
-from .core.config import load_router_config
+from core.config import load_router_config
 
 # Load router configuration
 router_config = load_router_config()

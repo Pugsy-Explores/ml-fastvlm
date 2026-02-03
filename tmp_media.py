@@ -18,7 +18,7 @@ import logging
 from typing import Optional
 import urllib.parse
 
-from .core.config import load_media_config
+from core.config import load_media_config
 
 logger = logging.getLogger("fastvlm.tmp_media")
 

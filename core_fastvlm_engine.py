@@ -26,7 +26,7 @@ from PIL import Image
 from scenedetect import VideoManager, SceneManager
 from scenedetect.detectors import ContentDetector
 
-from .core.config import FastVLMConfig, load_fastvlm_config
+from core.config import FastVLMConfig, load_fastvlm_config
 
 from llava.utils import disable_torch_init
 from llava.conversation import conv_templates
@@ -43,7 +43,7 @@ from transformers import logging as hf_logging
 hf_logging.set_verbosity_error()
 
 # Prompts: we use a human-readable single-frame prompt for Stage-0
-from .prompts import HUMAN_FRAME_PROMPT
+from prompts import HUMAN_FRAME_PROMPT
 
 # -----------------------
 # Logging

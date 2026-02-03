@@ -6,10 +6,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 from flask import Flask, jsonify, request
 
-from .core_fastvlm_engine import FastVLMEngine
-from .core.config import load_fastvlm_config
-from .tmp_media import TempMedia
-from .core.config import load_server_config
+from core_fastvlm_engine import FastVLMEngine
+from core.config import load_fastvlm_config
+from tmp_media import TempMedia
+from core.config import load_server_config
 
 # Load server configuration
 server_config = load_server_config()
