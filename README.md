@@ -236,15 +236,27 @@ flowchart TB
 - **Summarization**: Optional flan-t5-base or pegasus-xsum (fallback to join)
 
 
-### Configuration System (`fastvlm_config.py`)
+### Configuration System (`core/config.py`)
 
-Configuration is loaded from TOML file with environment variable overrides:
+FastVLM uses a **centralized configuration system** that consolidates all environment variables and settings into a single, well-organized module.
 
-**Config File**: `configs/fastvlm.toml` (or path from `FASTVLM_CONFIG_PATH`)
+**Configuration Classes:**
+- **`FastVLMConfig`**: Core engine settings (model path, device, video processing parameters)
+- **`RouterConfig`**: Router/worker management (ports, GPU/RAM thresholds, worker limits)
+- **`ServerConfig`**: HTTP server settings (port, worker threads)
+- **`MediaConfig`**: Media download/processing (size limits, timeouts)
+- **`SystemConfig`**: System-level settings (CUDA, PyTorch, TensorFlow)
+- **`ExternalConfig`**: External service configs (OpenAI API keys)
+
+**Config File**: `fastvlm.toml` (or path from `FASTVLM_CONFIG_PATH`)
+
+See `fastvlm.toml.example` for a complete configuration template.
 
 **Key Settings:**
+
+*FastVLM Engine:*
 - `model_path`: Path to FastVLM checkpoint directory (required)
-- `device`: "cuda" or "cpu"
+- `device`: "cuda", "cpu", or "mps"
 - `scene_threshold`: PySceneDetect threshold (default: 30.0)
 - `frame_similarity_threshold`: Deduplication threshold (default: 0.90)
 - `max_video_seconds`: Maximum video duration (default: 90.0)
@@ -255,8 +267,40 @@ Configuration is loaded from TOML file with environment variable overrides:
 - `enable_analysis`: Enable analyzer model (default: false)
 - `log_level`: Logging level (default: "INFO")
 
+*Router:*
+- `router_port`: Router HTTP port (default: 9000)
+- `backend_base_port`: Base port for workers (default: 7860)
+- `max_workers`: Maximum worker processes (default: 4)
+- `target_vram_fraction`: GPU memory threshold (default: 0.7)
+- `target_ram_fraction`: System RAM threshold (default: 0.8)
+- `max_concurrent_per_worker`: Concurrent requests per worker (default: 2)
+
+*Server:*
+- `port`: HTTP server port (default: 7860)
+- `workers`: ThreadPoolExecutor workers (default: 1)
+
+*Media:*
+- `max_download_size_bytes`: Maximum download size (default: 2 GiB)
+- `download_timeout_seconds`: Download timeout (default: 300s)
+
 **Environment Overrides:**
-All settings can be overridden via environment variables (e.g., `FASTVLM_MODEL_PATH`, `FASTVLM_DEVICE`, etc.)
+All settings can be overridden via environment variables (e.g., `FASTVLM_MODEL_PATH`, `FASTVLM_DEVICE`, `FASTVLM_ROUTER_PORT`, etc.)
+
+**Usage:**
+```python
+from pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.core.config import (
+    load_fastvlm_config,
+    load_router_config,
+    load_server_config,
+)
+
+fastvlm_cfg = load_fastvlm_config()
+router_cfg = load_router_config()
+server_cfg = load_server_config()
+```
+
+**Backward Compatibility:**
+The legacy `fastvlm_config.py` module is maintained for backward compatibility and delegates to the core config system.
 
 ### Media Handling (`tmp_media.py`)
 
@@ -434,9 +478,14 @@ ml_fastvlm/
 ├── fastvlm_router.py          # Router service (worker management, load balancing)
 ├── fastvlm_server.py          # Worker HTTP server (Flask endpoints)
 ├── core_fastvlm_engine.py      # Core inference engine (model, video processing)
-├── fastvlm_config.py           # Configuration loader (TOML + env overrides)
+├── fastvlm_config.py           # Legacy config (backward compatibility wrapper)
 ├── tmp_media.py                # Media downloader (local/HTTP/GCS)
 ├── prompts.py                  # Prompt templates (HUMAN_FRAME_PROMPT)
+├── core/                       # Centralized configuration system
+│   ├── config.py              # Configuration classes and loaders
+│   ├── utils.py               # Utility functions (system config, API keys)
+│   └── README.md              # Configuration documentation
+├── fastvlm.toml.example       # Example TOML configuration file
 └── README.md                   # This file
 ```
 
@@ -517,15 +566,23 @@ checkpoints/
 
 ### Step 2: Configure Model Path
 
-The model path is configured in the FastVLM config file. The system looks for config in this order:
+The model path is configured using the centralized configuration system. The system looks for config in this order:
 
 1. Path from `FASTVLM_CONFIG_PATH` environment variable
 2. `fastvlm.toml` in current working directory
 3. Falls back to defaults + environment overrides
 
-**Config file location:** `configs/fastvlm.toml` (or path from `FASTVLM_CONFIG_PATH`)
+**Config file location:** `fastvlm.toml` in the repository root (or path from `FASTVLM_CONFIG_PATH`)
 
-**Example configuration:**
+**Quick setup:**
+```bash
+# Copy the example config file
+cp fastvlm.toml.example fastvlm.toml
+
+# Edit fastvlm.toml and set your model_path
+```
+
+**Example configuration (`fastvlm.toml`):**
 ```toml
 [fastvlm]
 model_path = "/path/to/checkpoints/llava-fastvithd_0.5b_stage3"
@@ -539,7 +596,22 @@ max_context_chars = 256
 enable_summary = true
 enable_analysis = false
 log_level = "INFO"
+
+[router]
+router_port = 9000
+max_workers = 4
+target_vram_fraction = 0.7
+
+[server]
+port = 7860
+workers = 1
+
+[media]
+max_download_size_bytes = 2147483648
+download_timeout_seconds = 300.0
 ```
+
+See `fastvlm.toml.example` for a complete configuration template with all available settings.
 
 **Update the `model_path` to match your setup:**
 
@@ -591,9 +663,10 @@ ls src/pugsy_ai/pipelines/vlm_pipeline/fastvlm/ml_fastvlm/checkpoints/llava-fast
 ### Troubleshooting Model Setup
 
 **Model not found error:**
-- Verify the path in `configs/fastvlm.toml` matches your actual checkpoint location
+- Verify the path in `fastvlm.toml` (or `FASTVLM_MODEL_PATH` env var) matches your actual checkpoint location
 - Ensure you've run `./get_models.sh` and models are extracted
 - Check that the checkpoint directory name matches exactly (case-sensitive)
+- Use absolute paths in the config file to avoid path resolution issues
 
 **Download failed:**
 - Check your internet connection
@@ -617,7 +690,7 @@ The FastVLM Router is the main service that manages multiple worker processes an
 - FastVLM model checkpoints downloaded (see Model Setup above)
 - Required dependencies installed (`pynvml`, `psutil`, `flask`, `requests`)
 - GPU with CUDA support (for GPU-based workers) or CPU fallback
-- Model path configured in `configs/fastvlm.toml`
+- Model path configured in `fastvlm.toml` or `FASTVLM_MODEL_PATH` environment variable
 
 ### Method 1: Using VS Code (Recommended for Development)
 
@@ -758,7 +831,7 @@ while True:
 - Check logs for worker spawn errors
 - **Ensure model checkpoints are downloaded and configured** (see [Model Setup](#-model-setup) section above)
   - Verify `./get_models.sh` has been run successfully
-  - Check that `configs/fastvlm.toml` has the correct `model_path`
+  - Check that `fastvlm.toml` (or `FASTVLM_MODEL_PATH` env var) has the correct `model_path`
   - Ensure the model path points to an existing checkpoint directory
 
 **Port already in use:**

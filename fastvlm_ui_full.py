@@ -8,8 +8,16 @@ fastvlm_ui_full.py
 """
 
 import os, sys, time, traceback
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
+# Apply system configuration from centralized config
+try:
+    from pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.core.utils import apply_system_config
+    apply_system_config()
+except ImportError:
+    # Fallback to direct environment variable setting
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128")
 
 import torch

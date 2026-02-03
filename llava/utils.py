@@ -104,9 +104,19 @@ def violates_moderation(text):
     """
     Check whether the text violates OpenAI moderation API.
     """
+    # Try to use centralized config, fallback to environment variable for backward compatibility
+    try:
+        from pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.core.utils import get_openai_api_key
+        api_key = get_openai_api_key()
+    except (ImportError, RuntimeError):
+        # Fallback to direct environment variable access
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY is not configured")
+    
     url = "https://api.openai.com/v1/moderations"
     headers = {"Content-Type": "application/json",
-               "Authorization": "Bearer " + os.environ["OPENAI_API_KEY"]}
+               "Authorization": "Bearer " + api_key}
     text = text.replace("\n", "")
     data = "{" + '"input": ' + f'"{text}"' + "}"
     data = data.encode("utf-8")

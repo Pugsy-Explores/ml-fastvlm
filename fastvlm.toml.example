@@ -1,0 +1,39 @@
+# FastVLM Configuration File (TOML)
+# Copy this file to fastvlm.toml and update with your values
+
+[fastvlm]
+model_path = "/path/to/your/model"
+device = "cuda"
+scene_threshold = 30.0
+frame_similarity_threshold = 0.90
+max_video_seconds = 90.0
+max_resolution = 1080
+max_frames = 24
+max_context_chars = 256
+enable_summary = true
+enable_analysis = false
+log_level = "INFO"
+
+[router]
+gpu_index = 0
+backend_base_port = 7860
+router_port = 9000
+target_vram_fraction = 0.7
+target_ram_fraction = 0.8
+max_workers = 4
+python_bin = "python3"
+server_module = "pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.fastvlm_server"
+max_concurrent_per_worker = 2
+check_ready_timeout_sec = 300
+check_ready_interval_sec = 2
+log_level = "INFO"
+
+[server]
+port = 7860
+workers = 1
+log_level = "INFO"
+
+[media]
+max_download_size_bytes = 2147483648  # 2 GiB
+download_timeout_seconds = 300.0
+chunk_size = 1048576  # 1 MiB

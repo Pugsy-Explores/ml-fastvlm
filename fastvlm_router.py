@@ -20,10 +20,13 @@ except ImportError:
 
 import threading  # NEW
 
+from .core.config import load_router_config
 
+# Load router configuration
+router_config = load_router_config()
 
 logging.basicConfig(
-    level=os.getenv("FASTVLM_LOG_LEVEL", "INFO"),
+    level=router_config.log_level,
     format="[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
@@ -32,28 +35,19 @@ logger = logging.getLogger("FastVLMRouter")
 app = Flask(__name__)
 
 # -----------------------------
-# Config
+# Config (from centralized config)
 # -----------------------------
-GPU_INDEX = int(os.getenv("FASTVLM_GPU_INDEX", "0"))
-BACKEND_BASE_PORT = int(os.getenv("FASTVLM_BACKEND_BASE_PORT", "7860"))
-ROUTER_PORT = int(os.getenv("FASTVLM_ROUTER_PORT", "9000"))
-TARGET_VRAM_FRACTION = float(os.getenv("FASTVLM_TARGET_VRAM_FRACTION", "0.4"))
-MAX_WORKERS = int(os.getenv("FASTVLM_MAX_WORKERS", "3"))
-PYTHON_BIN = os.getenv("FASTVLM_PYTHON_BIN", "python3")
-SERVER_MODULE = os.getenv(
-    "FASTVLM_SERVER_MODULE",
-    "pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.fastvlm_server",
-)
-MAX_CONCURRENT_PER_WORKER = int(os.getenv("FASTVLM_MAX_CONCURRENT_PER_WORKER", "2"))
-
-
-TARGET_VRAM_FRACTION = float(os.getenv("FASTVLM_TARGET_VRAM_FRACTION", "0.7"))
-TARGET_RAM_FRACTION = float(os.getenv("FASTVLM_TARGET_RAM_FRACTION", "0.8"))  # NEW
-MAX_WORKERS = int(os.getenv("FASTVLM_MAX_WORKERS", "4"))
-
-
-CHECK_READY_TIMEOUT_SEC = 300
-CHECK_READY_INTERVAL_SEC = 2
+GPU_INDEX = router_config.gpu_index
+BACKEND_BASE_PORT = router_config.backend_base_port
+ROUTER_PORT = router_config.router_port
+TARGET_VRAM_FRACTION = router_config.target_vram_fraction
+TARGET_RAM_FRACTION = router_config.target_ram_fraction
+MAX_WORKERS = router_config.max_workers
+PYTHON_BIN = router_config.python_bin
+SERVER_MODULE = router_config.server_module
+MAX_CONCURRENT_PER_WORKER = router_config.max_concurrent_per_worker
+CHECK_READY_TIMEOUT_SEC = router_config.check_ready_timeout_sec
+CHECK_READY_INTERVAL_SEC = router_config.check_ready_interval_sec
 
 
 # -----------------------------

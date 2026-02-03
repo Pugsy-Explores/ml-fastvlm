@@ -18,12 +18,15 @@ import logging
 from typing import Optional
 import urllib.parse
 
+from .core.config import load_media_config
+
 logger = logging.getLogger("fastvlm.tmp_media")
 
-# Configurable via env
-DEFAULT_MAX_BYTES = int(os.getenv("FASTVLM_MAX_DOWNLOAD_SIZE_BYTES", str(2 * 1024**3)))  # 2 GiB default
-DEFAULT_TIMEOUT = float(os.getenv("FASTVLM_DOWNLOAD_TIMEOUT_SECONDS", "300"))  # 5 min default
-CHUNK_SIZE = 1024 * 1024  # 1 MiB
+# Load media configuration
+_media_config = load_media_config()
+DEFAULT_MAX_BYTES = _media_config.max_download_size_bytes
+DEFAULT_TIMEOUT = _media_config.download_timeout_seconds
+CHUNK_SIZE = _media_config.chunk_size
 
 
 class TempMedia:

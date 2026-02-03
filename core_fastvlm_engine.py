@@ -48,6 +48,8 @@ from .prompts import HUMAN_FRAME_PROMPT
 # -----------------------
 # Logging
 # -----------------------
+# Note: Logging level will be set by the config when FastVLMConfig is loaded
+# This is a fallback for when the module is imported before config is loaded
 logging.basicConfig(
     level=os.getenv("FASTVLM_LOG_LEVEL", "INFO"),
     format="[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",

@@ -14,8 +14,14 @@ from llava.utils import disable_torch_init
 from llava.model.builder import load_pretrained_model
 
 # --- 2. envs for reproducible export ---
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["PYTORCH_SDP_KERNEL"] = "math"     # use traceable attention
+# Apply system configuration from centralized config
+try:
+    from pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.core.utils import apply_system_config
+    apply_system_config()
+except ImportError:
+    # Fallback to direct environment variable setting
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["PYTORCH_SDP_KERNEL"] = "math"     # use traceable attention
 torch.set_grad_enabled(False)
 torch.backends.cudnn.benchmark = True
 try: torch.set_float32_matmul_precision("high")

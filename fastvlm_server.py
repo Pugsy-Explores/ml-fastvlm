@@ -9,12 +9,16 @@ from flask import Flask, jsonify, request
 from .core_fastvlm_engine import FastVLMEngine
 from .fastvlm_config import load_fastvlm_config
 from .tmp_media import TempMedia
+from .core.config import load_server_config
+
+# Load server configuration
+server_config = load_server_config()
 
 # -----------------------
 # Logging
 # -----------------------
 logging.basicConfig(
-    level=os.getenv("FASTVLM_LOG_LEVEL", "INFO"),
+    level=server_config.log_level,
     format="[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
@@ -25,7 +29,7 @@ logger = logging.getLogger("FastVLMHTTP")
 # App + Engine
 # -----------------------
 app = Flask(__name__)
-executor = ThreadPoolExecutor(max_workers=int(os.getenv("FASTVLM_WORKERS", "1")))
+executor = ThreadPoolExecutor(max_workers=server_config.workers)
 
 def shutdown_executor():
     """Shutdown ThreadPoolExecutor on exit."""
@@ -163,9 +167,8 @@ def summarize_video():
 
 if __name__ == "__main__":
     # Dev-only. In prod: gunicorn -w 1 -b 0.0.0.0:7860 fastvlm_server:app
-    port = int(os.getenv("FASTVLM_PORT", "7860"))
-    logger.info("Starting FastVLM HTTP server on 0.0.0.0:%d", port)
+    logger.info("Starting FastVLM HTTP server on 0.0.0.0:%d", server_config.port)
     try:
-        app.run(host="0.0.0.0", port=port, debug=False)
+        app.run(host="0.0.0.0", port=server_config.port, debug=False)
     finally:
         shutdown_executor()
