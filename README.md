@@ -21,6 +21,102 @@ The system is optimized for **GPU efficiency** and **parallel workload handling*
 
 ---
 
+## 🚀 Quick Reference
+
+### Setup (First Time)
+
+```bash
+# 1. Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# 2. Install requirements
+pip install -r requirements_fastvlm_0.1.0.txt
+
+# 3. Download models
+./get_models.sh
+
+# 4. Setup configuration
+cp fastvlm.toml.example fastvlm.toml
+# Edit fastvlm.toml and set model_path to the downloaded model, e.g.:
+# model_path = "./checkpoints/llava-fastvithd_0.5b_stage3"
+
+# You're good to go! 🎉
+```
+
+### Starting the System
+
+```bash
+# Start router (auto-bootstraps workers)
+PYTHONPATH=./src python -m pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.fastvlm_router
+```
+
+### Key Environment Variables
+
+**Router:**
+- `FASTVLM_ROUTER_PORT=9000` - Router HTTP port
+- `FASTVLM_BACKEND_BASE_PORT=7860` - Starting port for workers
+- `FASTVLM_GPU_INDEX=0` - GPU to use
+- `FASTVLM_MAX_WORKERS=4` - Maximum workers to spawn
+- `FASTVLM_TARGET_VRAM_FRACTION=0.7` - GPU memory threshold
+- `FASTVLM_TARGET_RAM_FRACTION=0.8` - System RAM threshold
+- `FASTVLM_MAX_CONCURRENT_PER_WORKER=2` - Concurrency per worker
+
+**Engine:**
+- `FASTVLM_MODEL_PATH` - Model checkpoint path (required, or set in fastvlm.toml)
+- `FASTVLM_DEVICE=cuda` - Device (cuda/cpu)
+- `FASTVLM_CONFIG_PATH` - Config file path (default: fastvlm.toml)
+- `FASTVLM_LOG_LEVEL=INFO` - Logging level
+
+**Worker Server:**
+- `FASTVLM_PORT=7860` - Worker HTTP port (auto-assigned by router)
+- `FASTVLM_WORKERS=1` - ThreadPoolExecutor workers
+
+### Common Operations
+
+**Check system status:**
+```bash
+curl http://localhost:9000/healthz
+curl http://localhost:9000/readyz
+```
+
+**Process an image:**
+```bash
+curl -X POST http://localhost:9000/predict_image \
+  -H "Content-Type: application/json" \
+  -d '{"image_path": "/path/to/image.jpg", "prompt": "Describe this image"}'
+```
+
+**Process a video:**
+```bash
+curl -X POST http://localhost:9000/summarize_video \
+  -H "Content-Type: application/json" \
+  -d '{"video_path": "/path/to/video.mp4"}'
+```
+
+### Architecture Summary
+
+1. **Router** (`fastvlm_router.py`): Manages worker pool, load balancing, concurrency control
+2. **Worker Server** (`fastvlm_server.py`): HTTP endpoints, ThreadPoolExecutor, TempMedia handling
+3. **Engine** (`core_fastvlm_engine.py`): Model inference, video processing, captioning pipeline
+
+### Data Flow
+
+```
+Client Request
+  → Router (port 9000)
+    → Worker Selection (round-robin + slot check)
+      → Worker Server (port 7860+)
+        → ThreadPoolExecutor
+          → FastVLMEngine
+            → FastVLMModel (inference)
+              → Response
+                → Router
+                  → Client
+```
+
+---
+
 ## 🏗 Architecture (High Level)
 
 ```mermaid
@@ -1121,81 +1217,6 @@ Includes:
 * End-to-end stress
 * Retry-path draining
 * Error-path validation
-
----
-
-## 🚀 Quick Reference
-
-### Starting the System
-
-```bash
-# Start router (auto-bootstraps workers)
-PYTHONPATH=./src python -m pugsy_ai.pipelines.vlm_pipeline.fastvlm.ml_fastvlm.fastvlm_router
-```
-
-### Key Environment Variables
-
-**Router:**
-- `FASTVLM_ROUTER_PORT=9000` - Router HTTP port
-- `FASTVLM_BACKEND_BASE_PORT=7860` - Starting port for workers
-- `FASTVLM_GPU_INDEX=0` - GPU to use
-- `FASTVLM_MAX_WORKERS=4` - Maximum workers to spawn
-- `FASTVLM_TARGET_VRAM_FRACTION=0.7` - GPU memory threshold
-- `FASTVLM_TARGET_RAM_FRACTION=0.8` - System RAM threshold
-- `FASTVLM_MAX_CONCURRENT_PER_WORKER=2` - Concurrency per worker
-
-**Engine:**
-- `FASTVLM_MODEL_PATH` - Model checkpoint path (required)
-- `FASTVLM_DEVICE=cuda` - Device (cuda/cpu)
-- `FASTVLM_CONFIG_PATH` - Config file path
-- `FASTVLM_LOG_LEVEL=INFO` - Logging level
-
-**Worker Server:**
-- `FASTVLM_PORT=7860` - Worker HTTP port (auto-assigned by router)
-- `FASTVLM_WORKERS=1` - ThreadPoolExecutor workers
-
-### Common Operations
-
-**Check system status:**
-```bash
-curl http://localhost:9000/healthz
-curl http://localhost:9000/readyz
-```
-
-**Process an image:**
-```bash
-curl -X POST http://localhost:9000/predict_image \
-  -H "Content-Type: application/json" \
-  -d '{"image_path": "/path/to/image.jpg", "prompt": "Describe this image"}'
-```
-
-**Process a video:**
-```bash
-curl -X POST http://localhost:9000/summarize_video \
-  -H "Content-Type: application/json" \
-  -d '{"video_path": "/path/to/video.mp4"}'
-```
-
-### Architecture Summary
-
-1. **Router** (`fastvlm_router.py`): Manages worker pool, load balancing, concurrency control
-2. **Worker Server** (`fastvlm_server.py`): HTTP endpoints, ThreadPoolExecutor, TempMedia handling
-3. **Engine** (`core_fastvlm_engine.py`): Model inference, video processing, captioning pipeline
-
-### Data Flow
-
-```
-Client Request
-  → Router (port 9000)
-    → Worker Selection (round-robin + slot check)
-      → Worker Server (port 7860+)
-        → ThreadPoolExecutor
-          → FastVLMEngine
-            → FastVLMModel (inference)
-              → Response
-                → Router
-                  → Client
-```
 
 ---
 
