@@ -1,3 +1,5 @@
+![visitors](https://visitor-badge.laobi.icu/badge?page_id=Pugsy-Explores.ml-fastvlm)
+
 # 📦 **FastVLM AI Descriptor Engine**
 
 **High-Performance Vision-Language Model Server for Image & Video Understanding**
